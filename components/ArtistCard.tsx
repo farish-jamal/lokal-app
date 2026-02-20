@@ -6,13 +6,14 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 interface ArtistCardProps {
     artist: Artist;
     size?: number;
+    onPress?: () => void;
 }
 
-export default function ArtistCard({ artist, size = 110 }: ArtistCardProps) {
+export default function ArtistCard({ artist, size = 110, onPress }: ArtistCardProps) {
     const C = useThemeColors();
 
     return (
-        <TouchableOpacity style={[styles.container, { width: size }]} activeOpacity={0.8}>
+        <TouchableOpacity style={[styles.container, { width: size }]} activeOpacity={0.8} onPress={onPress}>
             <Image
                 source={{ uri: artist.image }}
                 style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}

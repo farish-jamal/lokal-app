@@ -22,6 +22,9 @@ import SectionHeader from '@/components/SectionHeader';
 import SongRow from '@/components/SongRow';
 import MiniPlayer from '@/components/MiniPlayer';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import ArtistDetailScreen from '../artistDetail';
+import AlbumDetailScreen from '../albumDetail';
+import FullScreenPlayer from '../fullScreenPlayer';
 
 const TABS = ['Suggested', 'Songs', 'Artists', 'Albums', 'Favorites'];
 
@@ -124,7 +127,7 @@ const ALBUM_SORT_OPTIONS: AlbumSortOption[] = [
 ];
 
 // ─── Suggested tab content ──────────────────────────────────────────────────
-function SuggestedContent() {
+function SuggestedContent({ onSongPress, onArtistPress }: { onSongPress: (song: any) => void; onArtistPress?: (artist: any) => void }) {
   const C = useThemeColors();
   const { recentlyPlayed, mostPlayed } = useAppSelector(s => s.player);
 
@@ -141,7 +144,12 @@ function SuggestedContent() {
           showsHorizontalScrollIndicator={false}
           data={recentlyPlayed}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <SongCard song={item} />}
+          renderItem={({ item }) => (
+            <SongCard 
+              song={item} 
+              onPress={() => onSongPress(item)} 
+            />
+          )}
           contentContainerStyle={{ paddingRight: 8 }}
         />
       </View>
@@ -153,7 +161,7 @@ function SuggestedContent() {
           showsHorizontalScrollIndicator={false}
           data={ARTISTS}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <ArtistCard artist={item} />}
+          renderItem={({ item }) => <ArtistCard artist={item} onPress={() => onArtistPress && onArtistPress(item)} />}
           contentContainerStyle={{ paddingRight: 8 }}
         />
       </View>
@@ -165,7 +173,12 @@ function SuggestedContent() {
           showsHorizontalScrollIndicator={false}
           data={mostPlayed}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <SongCard song={item} />}
+          renderItem={({ item }) => (
+            <SongCard 
+              song={item} 
+              onPress={() => onSongPress(item)} 
+            />
+          )}
           contentContainerStyle={{ paddingRight: 8 }}
         />
       </View>
@@ -177,20 +190,24 @@ function SuggestedContent() {
           showsHorizontalScrollIndicator={false}
           data={ALBUMS}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <SongCard
-              song={{
-                id: item.id,
-                title: item.title,
-                artist: item.artist,
-                album: item.title,
-                duration: 0,
-                artwork: item.artwork,
-                url: '',
-                isFavorite: false,
-              }}
-            />
-          )}
+          renderItem={({ item }) => {
+            const songData = {
+              id: item.id,
+              title: item.title,
+              artist: item.artist,
+              album: item.title,
+              duration: 0,
+              artwork: item.artwork,
+              url: '',
+              isFavorite: false,
+            };
+            return (
+              <SongCard
+                song={songData}
+                onPress={() => onSongPress(songData)}
+              />
+            );
+          }}
           contentContainerStyle={{ paddingRight: 8 }}
         />
       </View>
@@ -199,7 +216,7 @@ function SuggestedContent() {
 }
 
 // ─── Songs tab content ───────────────────────────────────────────────────────
-function SongsContent() {
+function SongsContent({ onSongPress }: { onSongPress: (song: any) => void }) {
   const C = useThemeColors();
   const [currentSort, setCurrentSort] = useState<SortOption>(SORT_OPTIONS[0]);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -418,6 +435,7 @@ function SongsContent() {
         renderItem={({ item }) => (
           <SongRow 
             song={item} 
+            onPress={() => onSongPress(item)}
             onMorePress={() => {
               setSelectedSong(item);
               setShowSongContext(true);
@@ -433,12 +451,14 @@ function SongsContent() {
 }
 
 // ─── Artists tab content ─────────────────────────────────────────────────────
-function ArtistsContent() {
+function ArtistsContent({ onSongPress }: { onSongPress?: (song: any) => void }) {
   const C = useThemeColors();
   const [selectedArtist, setSelectedArtist] = useState<any>(null);
   const [showArtistContext, setShowArtistContext] = useState(false);
   const [currentArtistSort, setCurrentArtistSort] = useState<ArtistSortOption>(ARTIST_SORT_OPTIONS[0]);
   const [showArtistSortDropdown, setShowArtistSortDropdown] = useState(false);
+  const [showArtistDetail, setShowArtistDetail] = useState(false);
+  const [selectedArtistForDetail, setSelectedArtistForDetail] = useState<any>(null);
   
   const getArtistStats = (artistName: string) => {
     const artistAlbums = ALBUMS.filter(album => album.artist === artistName);
@@ -645,7 +665,14 @@ function ArtistsContent() {
           const stats = getArtistStats(item.name);
           return (
             <View style={[styles.artistRow, { borderBottomColor: C.border }]}>
-              <TouchableOpacity style={styles.artistContent} activeOpacity={0.8}>
+              <TouchableOpacity 
+                style={styles.artistContent} 
+                activeOpacity={0.8}
+                onPress={() => {
+                  setSelectedArtistForDetail(item);
+                  setShowArtistDetail(true);
+                }}
+              >
                 <Image
                   source={{ uri: item.image }}
                   style={styles.artistImage}
@@ -675,17 +702,39 @@ function ArtistsContent() {
       />
       {renderArtistSortDropdown()}
       {renderArtistContextMenu()}
+      
+      {/* Artist Detail Modal */}
+      <Modal
+        visible={showArtistDetail}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => {
+          setShowArtistDetail(false);
+          setSelectedArtistForDetail(null);
+        }}
+      >
+        <ArtistDetailScreen
+          artistName={selectedArtistForDetail?.name}
+          onSongPress={onSongPress}
+          onBack={() => {
+            setShowArtistDetail(false);
+            setSelectedArtistForDetail(null);
+          }}
+        />
+      </Modal>
     </View>
   );
 }
 
 // ─── Albums tab content ──────────────────────────────────────────────────────
-function AlbumsContent() {
+function AlbumsContent({ onSongPress }: { onSongPress?: (song: any) => void }) {
   const C = useThemeColors();
   const [selectedAlbum, setSelectedAlbum] = useState<any>(null);
   const [showAlbumContext, setShowAlbumContext] = useState(false);
   const [currentAlbumSort, setCurrentAlbumSort] = useState<AlbumSortOption>(ALBUM_SORT_OPTIONS[0]);
   const [showAlbumSortDropdown, setShowAlbumSortDropdown] = useState(false);
+  const [showAlbumDetail, setShowAlbumDetail] = useState(false);
+  const [selectedAlbumForDetail, setSelectedAlbumForDetail] = useState<any>(null);
   
   const getSortedAlbums = () => {
     return [...ALBUMS].sort((a, b) => {
@@ -881,7 +930,13 @@ function AlbumsContent() {
         columnWrapperStyle={{ justifyContent: 'space-between' }}
         renderItem={({ item }) => (
           <View style={styles.albumCard}>
-            <TouchableOpacity activeOpacity={0.8}>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              onPress={() => {
+                setSelectedAlbumForDetail(item);
+                setShowAlbumDetail(true);
+              }}
+            >
               <Image
                 source={{ uri: item.artwork }}
                 style={styles.albumArtwork}
@@ -889,7 +944,8 @@ function AlbumsContent() {
               />
               <TouchableOpacity 
                 style={styles.albumMoreBtn}
-                onPress={() => {
+                onPress={(e) => {
+                  e.stopPropagation();
                   setSelectedAlbum(item);
                   setShowAlbumContext(true);
                 }}
@@ -913,12 +969,32 @@ function AlbumsContent() {
       />
       {renderAlbumSortDropdown()}
       {renderAlbumContextMenu()}
+      
+      {/* Album Detail Modal */}
+      <Modal
+        visible={showAlbumDetail}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => {
+          setShowAlbumDetail(false);
+          setSelectedAlbumForDetail(null);
+        }}
+      >
+        <AlbumDetailScreen
+          album={selectedAlbumForDetail}
+          onSongPress={onSongPress}
+          onBack={() => {
+            setShowAlbumDetail(false);
+            setSelectedAlbumForDetail(null);
+          }}
+        />
+      </Modal>
     </View>
   );
 }
 
 // ─── Favorites tab content ───────────────────────────────────────────────────
-function FavoritesContent() {
+function FavoritesContent({ onSongPress }: { onSongPress: (song: any) => void }) {
   const C = useThemeColors();
   const { favorites } = useAppSelector(s => s.library);
 
@@ -940,6 +1016,7 @@ function FavoritesContent() {
       renderItem={({ item }) => (
         <SongRow 
           song={item} 
+          onPress={() => onSongPress(item)}
           onMorePress={() => {
             // Note: You might want to add context menu here too
             console.log('More pressed for favorite:', item.title);
@@ -955,15 +1032,29 @@ export default function HomeScreen() {
   const C = useThemeColors();
   const scheme = useColorScheme() ?? 'light';
   const [activeTab, setActiveTab] = useState(0);
+  const [showFullScreenPlayer, setShowFullScreenPlayer] = useState(false);
+  const [currentPlayingSong, setCurrentPlayingSong] = useState<any>(null);
+  const [showArtistDetail, setShowArtistDetail] = useState(false);
+  const [selectedArtistForDetail, setSelectedArtistForDetail] = useState<any>(null);
+
+  const handleSongPress = (song: any) => {
+    setCurrentPlayingSong(song);
+    setShowFullScreenPlayer(true);
+  };
+
+  const handleArtistPress = (artist: any) => {
+    setSelectedArtistForDetail(artist);
+    setShowArtistDetail(true);
+  };
 
   function renderTabContent() {
     switch (activeTab) {
-      case 0: return <SuggestedContent />;
-      case 1: return <SongsContent />;
-      case 2: return <ArtistsContent />;
-      case 3: return <AlbumsContent />;
-      case 4: return <FavoritesContent />;
-      default: return <SuggestedContent />;
+      case 0: return <SuggestedContent onSongPress={handleSongPress} onArtistPress={handleArtistPress} />;
+      case 1: return <SongsContent onSongPress={handleSongPress} />;
+      case 2: return <ArtistsContent onSongPress={handleSongPress} />;
+      case 3: return <AlbumsContent onSongPress={handleSongPress} />;
+      case 4: return <FavoritesContent onSongPress={handleSongPress} />;
+      default: return <SuggestedContent onSongPress={handleSongPress} onArtistPress={handleArtistPress} />;
     }
   }
 
@@ -1029,6 +1120,44 @@ export default function HomeScreen() {
 
       {/* ─── Mini Player ─────────────────────────────────────── */}
       <MiniPlayer />
+      
+      {/* Artist Detail Modal */}
+      <Modal
+        visible={showArtistDetail}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => {
+          setShowArtistDetail(false);
+          setSelectedArtistForDetail(null);
+        }}
+      >
+        <ArtistDetailScreen
+          artistName={selectedArtistForDetail?.name}
+          onSongPress={handleSongPress}
+          onBack={() => {
+            setShowArtistDetail(false);
+            setSelectedArtistForDetail(null);
+          }}
+        />
+      </Modal>
+      
+      {/* Full Screen Player Modal */}
+      <Modal
+        visible={showFullScreenPlayer}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => {
+          setShowFullScreenPlayer(false);
+          setCurrentPlayingSong(null);
+        }}
+      >
+        <FullScreenPlayer
+          song={currentPlayingSong}
+          onBack={() => {
+            setShowFullScreenPlayer(false);
+          }}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }

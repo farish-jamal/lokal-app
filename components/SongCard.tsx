@@ -15,21 +15,29 @@ import { setCurrentSong } from '@/store/slices/playerSlice';
 interface SongCardProps {
     song: Song;
     width?: number;
+    onPress?: () => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2.5;
 
-export default function SongCard({ song, width }: SongCardProps) {
+export default function SongCard({ song, width, onPress }: SongCardProps) {
     const C = useThemeColors();
     const dispatch = useAppDispatch();
     const cardWidth = width ?? CARD_WIDTH;
+
+    const handlePress = () => {
+        dispatch(setCurrentSong(song));
+        if (onPress) {
+            onPress();
+        }
+    };
 
     return (
         <TouchableOpacity
             style={[styles.container, { width: cardWidth }]}
             activeOpacity={0.8}
-            onPress={() => dispatch(setCurrentSong(song))}
+            onPress={handlePress}
         >
             <Image
                 source={{ uri: song.artwork }}

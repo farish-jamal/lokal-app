@@ -15,6 +15,7 @@ import { setCurrentSong, togglePlay } from '@/store/slices/playerSlice';
 interface SongRowProps {
     song: Song;
     onMorePress?: () => void;
+    onPress?: () => void;
 }
 
 function formatDuration(seconds: number) {
@@ -25,7 +26,7 @@ function formatDuration(seconds: number) {
     return `${mm}:${ss} mins`;
 }
 
-export default function SongRow({ song, onMorePress }: SongRowProps) {
+export default function SongRow({ song, onMorePress, onPress }: SongRowProps) {
     const C = useThemeColors();
     const dispatch = useAppDispatch();
     const { currentSong, isPlaying } = useAppSelector(s => s.player);
@@ -40,10 +41,17 @@ export default function SongRow({ song, onMorePress }: SongRowProps) {
         }
     }
 
+    function handleSongPress() {
+        handlePlay();
+        if (onPress) {
+            onPress();
+        }
+    }
+
     return (
         <View style={[styles.container, { borderBottomColor: C.border }]}>
             {/* Artwork */}
-            <TouchableOpacity activeOpacity={0.85} onPress={handlePlay}>
+            <TouchableOpacity activeOpacity={0.85} onPress={handleSongPress}>
                 <Image
                     source={{ uri: song.artwork }}
                     style={[styles.artwork, isActive && styles.artworkActive]}
@@ -52,7 +60,7 @@ export default function SongRow({ song, onMorePress }: SongRowProps) {
             </TouchableOpacity>
 
             {/* Info */}
-            <View style={styles.info}>
+            <TouchableOpacity style={styles.info} activeOpacity={0.85} onPress={handleSongPress}>
                 <Text
                     style={[
                         styles.title,
@@ -71,7 +79,7 @@ export default function SongRow({ song, onMorePress }: SongRowProps) {
                         {formatDuration(song.duration)}
                     </Text>
                 </View>
-            </View>
+            </TouchableOpacity>
 
             {/* Play button */}
             <TouchableOpacity onPress={handlePlay} style={styles.playBtn} activeOpacity={0.7}>
