@@ -3,10 +3,8 @@ import {
   View,
   Text,
   ScrollView,
-  FlatList,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Platform,
   Image,
@@ -16,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SONGS } from '@/store/data/dummyData';
-import SongRow from '@/components/SongRow';
 
 interface SongContextOption {
   id: string;

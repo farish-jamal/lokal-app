@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View,
   Text,
   ScrollView,
   FlatList,
@@ -11,11 +10,12 @@ import {
   Platform,
   Modal,
   Image,
+  View, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { useAppSelector } from '@/store/hooks';
-import { SONGS, ARTISTS, ALBUMS } from '@/store/data/dummyData';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchHomeData, fetchArtists, fetchAlbums } from '@/store/slices/librarySlice';
 import SongCard from '@/components/SongCard';
 import ArtistCard from '@/components/ArtistCard';
 import SectionHeader from '@/components/SectionHeader';
@@ -129,7 +129,16 @@ const ALBUM_SORT_OPTIONS: AlbumSortOption[] = [
 // ─── Suggested tab content ──────────────────────────────────────────────────
 function SuggestedContent({ onSongPress, onArtistPress }: { onSongPress: (song: any) => void; onArtistPress?: (artist: any) => void }) {
   const C = useThemeColors();
-  const { recentlyPlayed, mostPlayed } = useAppSelector(s => s.player);
+  const { songs, artists, albums, loading } = useAppSelector(s => s.library);
+
+  if (loading.home) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: C.background }]}>
+        <ActivityIndicator size="large" color={C.primary} />
+        <Text style={[styles.loadingText, { color: C.text }]}>Loading content...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -142,7 +151,7 @@ function SuggestedContent({ onSongPress, onArtistPress }: { onSongPress: (song: 
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={recentlyPlayed}
+          data={songs.slice(0, 10)}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
             <SongCard 
@@ -159,7 +168,7 @@ function SuggestedContent({ onSongPress, onArtistPress }: { onSongPress: (song: 
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={ARTISTS}
+          data={artists.slice(0, 10)}
           keyExtractor={item => item.id}
           renderItem={({ item }) => <ArtistCard artist={item} onPress={() => onArtistPress && onArtistPress(item)} />}
           contentContainerStyle={{ paddingRight: 8 }}
@@ -171,7 +180,7 @@ function SuggestedContent({ onSongPress, onArtistPress }: { onSongPress: (song: 
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={mostPlayed}
+          data={songs.slice(10, 20)}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
             <SongCard 
@@ -188,7 +197,7 @@ function SuggestedContent({ onSongPress, onArtistPress }: { onSongPress: (song: 
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={ALBUMS}
+          data={albums.slice(0, 10)}
           keyExtractor={item => item.id}
           renderItem={({ item }) => {
             const songData = {
@@ -243,22 +252,18 @@ function SongsContent({ onSongPress }: { onSongPress: (song: any) => void }) {
           bValue = b.album || '';
           break;
         case 'year':
-          // Assuming year might be added to song data later
           aValue = (a as any).year || 0;
           bValue = (b as any).year || 0;
           break;
         case 'dateAdded':
-          // Assuming dateAdded might be added to song data later
           aValue = (a as any).dateAdded || 0;
           bValue = (b as any).dateAdded || 0;
           break;
         case 'dateModified':
-          // Assuming dateModified might be added to song data later
           aValue = (a as any).dateModified || 0;
           bValue = (b as any).dateModified || 0;
           break;
         case 'composer':
-          // Assuming composer might be added to song data later
           aValue = (a as any).composer || '';
           bValue = (b as any).composer || '';
           break;
@@ -283,7 +288,6 @@ function SongsContent({ onSongPress }: { onSongPress: (song: any) => void }) {
     console.log(`Action ${actionId} for song:`, selectedSong?.title);
     setShowSongContext(false);
     setSelectedSong(null);
-    // Add your action handlers here
   };
 
   const renderSortDropdown = () => (
@@ -453,6 +457,8 @@ function SongsContent({ onSongPress }: { onSongPress: (song: any) => void }) {
 // ─── Artists tab content ─────────────────────────────────────────────────────
 function ArtistsContent({ onSongPress }: { onSongPress?: (song: any) => void }) {
   const C = useThemeColors();
+  const { artists, songs, albums } = useAppSelector(s => s.library);
+  const dispatch = useAppDispatch();
   const [selectedArtist, setSelectedArtist] = useState<any>(null);
   const [showArtistContext, setShowArtistContext] = useState(false);
   const [currentArtistSort, setCurrentArtistSort] = useState<ArtistSortOption>(ARTIST_SORT_OPTIONS[0]);
@@ -460,9 +466,16 @@ function ArtistsContent({ onSongPress }: { onSongPress?: (song: any) => void }) 
   const [showArtistDetail, setShowArtistDetail] = useState(false);
   const [selectedArtistForDetail, setSelectedArtistForDetail] = useState<any>(null);
   
+  // Fetch artists if not already loaded
+  useEffect(() => {
+    if (artists.length === 0) {
+      dispatch(fetchArtists());
+    }
+  }, [dispatch, artists.length]);
+  
   const getArtistStats = (artistName: string) => {
-    const artistAlbums = ALBUMS.filter(album => album.artist === artistName);
-    const artistSongs = SONGS.filter(song => song.artist === artistName);
+    const artistAlbums = albums.filter(album => album.artist === artistName);
+    const artistSongs = songs.filter(song => song.artist === artistName);
     return {
       albums: artistAlbums.length,
       songs: artistSongs.length
@@ -470,7 +483,7 @@ function ArtistsContent({ onSongPress }: { onSongPress?: (song: any) => void }) 
   };
 
   const getSortedArtists = () => {
-    return [...ARTISTS].sort((a, b) => {
+    return [...artists].sort((a, b) => {
       let aValue: string | number;
       let bValue: string | number;
 
@@ -644,7 +657,7 @@ function ArtistsContent({ onSongPress }: { onSongPress?: (song: any) => void }) 
     <View style={{ flex: 1, backgroundColor: C.background }}>
       <View style={[styles.sortRow, { borderBottomColor: C.border }]}>
         <Text style={[styles.songCount, { color: C.text }]}>
-          {ARTISTS.length} artists
+          {artists.length} artists
         </Text>
         <TouchableOpacity 
           style={styles.sortBtn} 
@@ -729,6 +742,8 @@ function ArtistsContent({ onSongPress }: { onSongPress?: (song: any) => void }) 
 // ─── Albums tab content ──────────────────────────────────────────────────────
 function AlbumsContent({ onSongPress }: { onSongPress?: (song: any) => void }) {
   const C = useThemeColors();
+  const { albums } = useAppSelector(s => s.library);
+  const dispatch = useAppDispatch();
   const [selectedAlbum, setSelectedAlbum] = useState<any>(null);
   const [showAlbumContext, setShowAlbumContext] = useState(false);
   const [currentAlbumSort, setCurrentAlbumSort] = useState<AlbumSortOption>(ALBUM_SORT_OPTIONS[0]);
@@ -736,8 +751,15 @@ function AlbumsContent({ onSongPress }: { onSongPress?: (song: any) => void }) {
   const [showAlbumDetail, setShowAlbumDetail] = useState(false);
   const [selectedAlbumForDetail, setSelectedAlbumForDetail] = useState<any>(null);
   
+  // Fetch albums if not already loaded
+  useEffect(() => {
+    if (albums.length === 0) {
+      dispatch(fetchAlbums());
+    }
+  }, [dispatch, albums.length]);
+  
   const getSortedAlbums = () => {
-    return [...ALBUMS].sort((a, b) => {
+    return [...albums].sort((a, b) => {
       let aValue: string | number;
       let bValue: string | number;
 
@@ -909,7 +931,7 @@ function AlbumsContent({ onSongPress }: { onSongPress?: (song: any) => void }) {
     <View style={{ flex: 1, backgroundColor: C.background }}>
       <View style={[styles.sortRow, { borderBottomColor: C.border }]}>
         <Text style={[styles.songCount, { color: C.text }]}>
-          {ALBUMS.length} albums
+          {albums.length} albums
         </Text>
         <TouchableOpacity 
           style={styles.sortBtn} 
@@ -1036,6 +1058,12 @@ export default function HomeScreen() {
   const [currentPlayingSong, setCurrentPlayingSong] = useState<any>(null);
   const [showArtistDetail, setShowArtistDetail] = useState(false);
   const [selectedArtistForDetail, setSelectedArtistForDetail] = useState<any>(null);
+  const dispatch = useAppDispatch();
+
+  // Fetch data on component mount
+  useEffect(() => {
+    dispatch(fetchHomeData());
+  }, [dispatch]);
 
   const handleSongPress = (song: any) => {
     setCurrentPlayingSong(song);
@@ -1451,5 +1479,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

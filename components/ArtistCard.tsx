@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Image, Text, StyleSheet, View } from 'react-native';
+import { TouchableOpacity, Image, Text, StyleSheet } from 'react-native';
 import { Artist } from '@/store/data/dummyData';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 
