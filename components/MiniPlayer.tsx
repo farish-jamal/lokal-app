@@ -14,8 +14,11 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { togglePlay, playNext, playPrev } from '@/store/slices/playerSlice';
 
 const { width: SW } = Dimensions.get('window');
+interface MiniPlayerProps {
+    onPress?: () => void;
+}
 
-export default function MiniPlayer() {
+export default function MiniPlayer({ onPress }: MiniPlayerProps) {
     const C = useThemeColors();
     const dispatch = useAppDispatch();
     const { currentSong, isPlaying } = useAppSelector(s => s.player);
@@ -23,7 +26,9 @@ export default function MiniPlayer() {
     if (!currentSong) return null;
 
     return (
-        <View
+        <TouchableOpacity
+            activeOpacity={1}
+            onPress={onPress}
             style={[
                 styles.container,
                 {
@@ -84,7 +89,7 @@ export default function MiniPlayer() {
                     </TouchableOpacity>
                 </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 }
 

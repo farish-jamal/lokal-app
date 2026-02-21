@@ -1068,6 +1068,7 @@ export default function HomeScreen() {
   const [showArtistDetail, setShowArtistDetail] = useState(false);
   const [selectedArtistForDetail, setSelectedArtistForDetail] = useState<any>(null);
   const dispatch = useAppDispatch();
+  const { currentSong } = useAppSelector(s => s.player);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -1157,7 +1158,13 @@ export default function HomeScreen() {
       </View>
 
       {/* ─── Mini Player ─────────────────────────────────────── */}
-      <MiniPlayer />
+      <MiniPlayer
+        onPress={() => {
+          if (currentSong) {
+            handleSongPress(currentSong);
+          }
+        }}
+      />
 
       {/* Artist Detail Modal */}
       <Modal

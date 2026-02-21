@@ -15,6 +15,7 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleFavoriteAsync } from '@/store/slices/librarySlice';
+import { togglePlay, playNext, playPrev } from '@/store/slices/playerSlice';
 
 const { width } = Dimensions.get('window');
 
@@ -52,9 +53,11 @@ export default function FullScreenPlayer({
   const scheme = useColorScheme() ?? 'light';
   const dispatch = useAppDispatch();
   const { favorites } = useAppSelector(s => s.library);
-  const isFavorite = favorites.some((f: Song) => f.id === song.id);
+  const { isPlaying, currentSong } = useAppSelector(s => s.player);
 
-  const [isPlaying, setIsPlaying] = useState(true);
+  const activeSong = currentSong || song;
+  const isFavorite = favorites.some((f: Song) => f.id === activeSong.id);
+
   const [currentTime, setCurrentTime] = useState(215); // 3:35 in seconds
   const [showTimer, setShowTimer] = useState(false);
 
@@ -85,11 +88,11 @@ export default function FullScreenPlayer({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const totalDuration = song.duration;
-  const progressPercentage = (currentTime / totalDuration) * 100;
+  const totalDuration = activeSong.duration || 0;
+  const progressPercentage = totalDuration ? (currentTime / totalDuration) * 100 : 0;
 
   const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
+    dispatch(togglePlay());
   };
 
   const handleSkipBackward = () => {
@@ -101,13 +104,13 @@ export default function FullScreenPlayer({
   };
 
   const handlePrevious = () => {
+    dispatch(playPrev());
     setCurrentTime(0);
-    // In a real app, this would switch to the previous song
   };
 
   const handleNext = () => {
-    // In a real app, this would switch to the next song
-    console.log('Next song');
+    dispatch(playNext());
+    setCurrentTime(0);
   };
 
   const handleProgressPress = (event: any) => {
@@ -154,7 +157,7 @@ export default function FullScreenPlayer({
           ]}
         >
           <Image
-            source={{ uri: song.artwork }}
+            source={{ uri: activeSong.artwork }}
             style={styles.artwork}
             resizeMode="cover"
           />
@@ -164,10 +167,10 @@ export default function FullScreenPlayer({
       {/* Song Info */}
       <View style={styles.songInfo}>
         <Text style={[styles.songTitle, { color: C.text }]} numberOfLines={1}>
-          {song.title}
+          {activeSong.title}
         </Text>
         <Text style={[styles.artistName, { color: C.textSecondary }]} numberOfLines={1}>
-          {song.artist}
+          {activeSong.artist}
         </Text>
       </View>
 
@@ -253,7 +256,7 @@ export default function FullScreenPlayer({
       <View style={styles.secondaryControls}>
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => dispatch(toggleFavoriteAsync(song as any))}
+          onPress={() => dispatch(toggleFavoriteAsync(activeSong as any))}
           activeOpacity={0.7}
         >
           <Ionicons
