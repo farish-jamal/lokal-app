@@ -11,6 +11,7 @@ import {
   Animated,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -26,6 +27,7 @@ import {
   downloadSong,
 } from '@/store/slices/playerSlice';
 import audioService from '@/services/audioService';
+import QueueScreen from './queueScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -83,6 +85,7 @@ export default function FullScreenPlayer({
   const isDownloading = songDownloadProgress !== undefined && songDownloadProgress < 1;
 
   const [showTimer, setShowTimer] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekPosition, setSeekPosition] = useState(0);
 
@@ -382,18 +385,27 @@ export default function FullScreenPlayer({
 
         <TouchableOpacity
           style={styles.secondaryButton}
+          onPress={() => setShowQueue(true)}
           activeOpacity={0.7}
         >
           <Ionicons name="list" size={24} color={C.textMuted} />
         </TouchableOpacity>
       </View>
 
-      {/* Lyrics */}
       <View style={styles.lyricsSection}>
         <Text style={[styles.lyricsText, { color: C.textMuted }]}>
           Lyrics
         </Text>
       </View>
+
+      <Modal
+        visible={showQueue}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowQueue(false)}
+      >
+        <QueueScreen onClose={() => setShowQueue(false)} />
+      </Modal>
     </View>
   );
 }

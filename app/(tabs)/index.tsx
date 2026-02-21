@@ -16,7 +16,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { setCurrentSong, setQueue } from '@/store/slices/playerSlice';
+import { setCurrentSong, setQueue, addToQueue, addToQueueEnd } from '@/store/slices/playerSlice';
 import { fetchHomeData, fetchArtists, fetchAlbums, toggleFavoriteAsync } from '@/store/slices/librarySlice';
 import SongCard from '@/components/SongCard';
 import ArtistCard from '@/components/ArtistCard';
@@ -289,8 +289,14 @@ function SongsContent({ onSongPress }: { onSongPress: (song: any) => void }) {
   };
 
   const handleSongContextAction = (actionId: string) => {
-    if (actionId === 'toggle-favorite' && selectedSong) {
-      dispatch(toggleFavoriteAsync(selectedSong));
+    if (selectedSong) {
+      if (actionId === 'toggle-favorite') {
+        dispatch(toggleFavoriteAsync(selectedSong));
+      } else if (actionId === 'play-next') {
+        dispatch(addToQueue(selectedSong));
+      } else if (actionId === 'add-to-queue') {
+        dispatch(addToQueueEnd(selectedSong));
+      }
     }
     console.log(`Action ${actionId} for song:`, selectedSong?.title);
     setShowSongContext(false);

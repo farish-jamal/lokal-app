@@ -14,6 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAppDispatch } from '@/store/hooks';
+import { addToQueue, addToQueueEnd } from '@/store/slices/playerSlice';
 import { SONGS } from '@/store/data/dummyData';
 
 interface SongContextOption {
@@ -56,6 +58,7 @@ export default function AlbumDetailScreen({
 }: AlbumDetailProps) {
   const C = useThemeColors();
   const scheme = useColorScheme() ?? 'light';
+  const dispatch = useAppDispatch();
   const [selectedSong, setSelectedSong] = useState<any>(null);
   const [showSongContext, setShowSongContext] = useState(false);
   const [albumData, setAlbumData] = useState<any>(null);
@@ -100,6 +103,13 @@ export default function AlbumDetailScreen({
     : "01:20:39"; // Based on the image
 
   const handleSongContextAction = (actionId: string) => {
+    if (selectedSong) {
+      if (actionId === 'play-next') {
+        dispatch(addToQueue(selectedSong));
+      } else if (actionId === 'add-to-queue') {
+        dispatch(addToQueueEnd(selectedSong));
+      }
+    }
     console.log(`Action ${actionId} for song:`, selectedSong?.title);
     setShowSongContext(false);
     setSelectedSong(null);

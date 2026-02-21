@@ -6,6 +6,8 @@ import {
     updatePlaybackStatus,
     playNext,
     setIsPlaying,
+    loadQueueFromStorage,
+    saveQueueToStorage,
 } from '@/store/slices/playerSlice';
 
 /**
@@ -15,11 +17,23 @@ import {
  */
 export function useAudioPlayer() {
     const dispatch = useAppDispatch();
-    const { currentSong, isPlaying, repeat, queue } = useAppSelector(s => s.player);
+    const { currentSong, isPlaying, repeat, queue, shuffle, queueLoaded } = useAppSelector(s => s.player);
     const downloadedSongs = useAppSelector(s => s.player.downloadedSongs);
     const prevSongIdRef = useRef<string | null>(null);
     const prevIsPlayingRef = useRef<boolean>(false);
     const isLoadingRef = useRef<boolean>(false);
+
+    // Initial load
+    useEffect(() => {
+        dispatch(loadQueueFromStorage());
+    }, [dispatch]);
+
+    // Save to storage on changes (only after initial load has finished)
+    useEffect(() => {
+        if (queueLoaded) {
+            dispatch(saveQueueToStorage());
+        }
+    }, [queue, currentSong, shuffle, repeat, queueLoaded, dispatch]);
 
     // Handle playback status updates
     const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
