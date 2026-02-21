@@ -421,6 +421,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : 35,
   },
   headerButton: {
     width: 44,
