@@ -12,6 +12,7 @@ import {
   Image,
   View, ActivityIndicator,
 } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
@@ -1112,6 +1113,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={[styles.searchBtn, { backgroundColor: C.surface }]}
           activeOpacity={0.7}
+          onPress={() => router.push('/search')}
         >
           <Ionicons name="search" size={20} color={C.textSecondary} />
         </TouchableOpacity>
@@ -1168,7 +1170,9 @@ export default function HomeScreen() {
         }}
       >
         <ArtistDetailScreen
+          artistId={selectedArtistForDetail?.id}
           artistName={selectedArtistForDetail?.name}
+          artistImage={selectedArtistForDetail?.image}
           onSongPress={handleSongPress}
           onBack={() => {
             setShowArtistDetail(false);
