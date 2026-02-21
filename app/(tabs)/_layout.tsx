@@ -4,6 +4,8 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAppDispatch } from '@/store/hooks';
+import { loadFavorites } from '@/store/slices/librarySlice';
 
 function TabIcon({
   name,
@@ -25,6 +27,11 @@ function TabIcon({
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
   const C = Colors[colorScheme];
+  const dispatch = useAppDispatch();
+
+  React.useEffect(() => {
+    dispatch(loadFavorites());
+  }, [dispatch]);
 
   return (
     <Tabs

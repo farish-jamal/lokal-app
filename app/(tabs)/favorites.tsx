@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { toggleFavorite } from '@/store/slices/librarySlice';
+import { toggleFavoriteAsync } from '@/store/slices/librarySlice';
 import { setCurrentSong } from '@/store/slices/playerSlice';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import MiniPlayer from '@/components/MiniPlayer';
@@ -82,7 +82,7 @@ export default function FavoritesScreen() {
                                 {formatDuration(item.duration)}
                             </Text>
                             <TouchableOpacity
-                                onPress={() => dispatch(toggleFavorite(item.id))}
+                                onPress={() => dispatch(toggleFavoriteAsync(item))}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
                                 <Ionicons name="heart" size={20} color={C.primary} />

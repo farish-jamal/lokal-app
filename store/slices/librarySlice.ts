@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Song } from '../data/dummyData';
 import { Artist, Album, Playlist, apiService } from '../../services/api';
 
@@ -81,18 +82,37 @@ export const fetchPlaylist = createAsyncThunk(
     }
 );
 
+export const loadFavorites = createAsyncThunk(
+    'library/loadFavorites',
+    async () => {
+        const data = await AsyncStorage.getItem('favorites');
+        if (data) {
+            return JSON.parse(data) as Song[];
+        }
+        return [];
+    }
+);
+
+export const toggleFavoriteAsync = createAsyncThunk(
+    'library/toggleFavoriteAsync',
+    async (song: Song, { getState }) => {
+        const state = getState() as any;
+        let favorites = [...state.library.favorites];
+        const exists = favorites.find((s: Song) => s.id === song.id);
+        if (exists) {
+            favorites = favorites.filter((s: Song) => s.id !== song.id);
+        } else {
+            favorites.push({ ...song, isFavorite: true });
+        }
+        await AsyncStorage.setItem('favorites', JSON.stringify(favorites));
+        return favorites;
+    }
+);
+
 const librarySlice = createSlice({
     name: 'library',
     initialState,
     reducers: {
-        toggleFavorite: (state, action: PayloadAction<string>) => {
-            const songId = action.payload;
-            const song = state.songs.find(s => s.id === songId);
-            if (song) {
-                song.isFavorite = !song.isFavorite;
-                state.favorites = state.songs.filter(s => s.isFavorite);
-            }
-        },
         setSearchQuery: (state, action: PayloadAction<string>) => {
             state.searchQuery = action.payload;
             if (action.payload.trim() === '') {
@@ -129,7 +149,7 @@ const librarySlice = createSlice({
                 state.loading.home = false;
                 state.error = action.error.message || 'Failed to fetch data';
             })
-        // Songs
+            // Songs
             .addCase(fetchSongs.pending, (state) => {
                 state.loading.songs = true;
                 state.error = null;
@@ -137,13 +157,12 @@ const librarySlice = createSlice({
             .addCase(fetchSongs.fulfilled, (state, action) => {
                 state.loading.songs = false;
                 state.songs = action.payload;
-                state.favorites = action.payload.filter(s => s.isFavorite);
             })
             .addCase(fetchSongs.rejected, (state, action) => {
                 state.loading.songs = false;
                 state.error = action.error.message || 'Failed to fetch songs';
             })
-        // Artists
+            // Artists
             .addCase(fetchArtists.pending, (state) => {
                 state.loading.artists = true;
                 state.error = null;
@@ -156,7 +175,7 @@ const librarySlice = createSlice({
                 state.loading.artists = false;
                 state.error = action.error.message || 'Failed to fetch artists';
             })
-        // Albums
+            // Albums
             .addCase(fetchAlbums.pending, (state) => {
                 state.loading.albums = true;
                 state.error = null;
@@ -169,7 +188,7 @@ const librarySlice = createSlice({
                 state.loading.albums = false;
                 state.error = action.error.message || 'Failed to fetch albums';
             })
-        // Playlists
+            // Playlists
             .addCase(fetchPlaylist.pending, (state) => {
                 state.loading.playlists = true;
                 state.error = null;
@@ -190,9 +209,16 @@ const librarySlice = createSlice({
             .addCase(fetchPlaylist.rejected, (state, action) => {
                 state.loading.playlists = false;
                 state.error = action.error.message || 'Failed to fetch playlist';
+            })
+            // Favorites
+            .addCase(loadFavorites.fulfilled, (state, action) => {
+                state.favorites = action.payload;
+            })
+            .addCase(toggleFavoriteAsync.fulfilled, (state, action) => {
+                state.favorites = action.payload;
             });
     },
 });
 
-export const { toggleFavorite, setSearchQuery, clearError } = librarySlice.actions;
+export const { setSearchQuery, clearError } = librarySlice.actions;
 export default librarySlice.reducer;

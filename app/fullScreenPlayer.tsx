@@ -13,6 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { toggleFavoriteAsync } from '@/store/slices/librarySlice';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +26,7 @@ interface Song {
   artwork: string;
   duration: number;
   url: string;
+  isFavorite?: boolean;
 }
 
 interface FullScreenPlayerProps {
@@ -32,7 +35,7 @@ interface FullScreenPlayerProps {
   onClose?: () => void;
 }
 
-export default function FullScreenPlayer({ 
+export default function FullScreenPlayer({
   song = {
     id: '1',
     title: 'Starboy',
@@ -43,15 +46,18 @@ export default function FullScreenPlayer({
     url: ''
   },
   onBack,
-  onClose 
+  onClose
 }: FullScreenPlayerProps) {
   const C = useThemeColors();
   const scheme = useColorScheme() ?? 'light';
+  const dispatch = useAppDispatch();
+  const { favorites } = useAppSelector(s => s.library);
+  const isFavorite = favorites.some((f: Song) => f.id === song.id);
+
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(215); // 3:35 in seconds
-  const [isFavorite, setIsFavorite] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
-  
+
   // Animation values
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -69,7 +75,7 @@ export default function FullScreenPlayer({
         useNativeDriver: true,
       }),
     ]).start();
-    
+
     if (callback) callback();
   };
 
@@ -128,7 +134,7 @@ export default function FullScreenPlayer({
         >
           <Ionicons name="chevron-down" size={28} color={C.text} />
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={styles.headerButton}
           activeOpacity={0.7}
@@ -175,21 +181,21 @@ export default function FullScreenPlayer({
             {formatTime(totalDuration)}
           </Text>
         </View>
-        
+
         <TouchableOpacity
           style={styles.progressBarContainer}
           onPress={handleProgressPress}
           activeOpacity={1}
         >
           <View style={[styles.progressBarBackground, { backgroundColor: C.border }]}>
-            <View 
+            <View
               style={[
-                styles.progressBarFill, 
-                { 
+                styles.progressBarFill,
+                {
                   backgroundColor: '#ff6b35',
                   width: `${progressPercentage}%`
                 }
-              ]} 
+              ]}
             />
           </View>
         </TouchableOpacity>
@@ -218,9 +224,9 @@ export default function FullScreenPlayer({
           onPress={() => handleButtonPress(handlePlayPause)}
           activeOpacity={0.8}
         >
-          <Ionicons 
-            name={isPlaying ? "pause" : "play"} 
-            size={32} 
+          <Ionicons
+            name={isPlaying ? "pause" : "play"}
+            size={32}
             color="white"
             style={!isPlaying ? { marginLeft: 3 } : {}}
           />
@@ -247,13 +253,13 @@ export default function FullScreenPlayer({
       <View style={styles.secondaryControls}>
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => setIsFavorite(!isFavorite)}
+          onPress={() => dispatch(toggleFavoriteAsync(song as any))}
           activeOpacity={0.7}
         >
-          <Ionicons 
-            name={isFavorite ? "heart" : "heart-outline"} 
-            size={24} 
-            color={isFavorite ? '#ff6b35' : C.textMuted} 
+          <Ionicons
+            name={isFavorite ? "heart" : "heart-outline"}
+            size={24}
+            color={isFavorite ? '#ff6b35' : C.textMuted}
           />
         </TouchableOpacity>
 

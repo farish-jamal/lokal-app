@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { fetchHomeData, fetchArtists, fetchAlbums } from '@/store/slices/librarySlice';
+import { fetchHomeData, fetchArtists, fetchAlbums, toggleFavoriteAsync } from '@/store/slices/librarySlice';
 import SongCard from '@/components/SongCard';
 import ArtistCard from '@/components/ArtistCard';
 import SectionHeader from '@/components/SectionHeader';
@@ -58,6 +58,7 @@ interface SongContextOption {
 const SONG_CONTEXT_OPTIONS: SongContextOption[] = [
   { id: 'play-next', label: 'Play Next', icon: 'play-skip-forward' },
   { id: 'add-to-queue', label: 'Add to Playing Queue', icon: 'list' },
+  { id: 'toggle-favorite', label: 'Toggle Favorite', icon: 'heart' },
   { id: 'add-to-playlist', label: 'Add to Playlist', icon: 'add-circle' },
   { id: 'go-to-album', label: 'Go to Album', icon: 'disc' },
   { id: 'go-to-artist', label: 'Go to Artist', icon: 'person' },
@@ -232,6 +233,7 @@ function SongsContent({ onSongPress }: { onSongPress: (song: any) => void }) {
   const [selectedSong, setSelectedSong] = useState<any>(null);
   const [showSongContext, setShowSongContext] = useState(false);
   const { songs } = useAppSelector(s => s.library);
+  const dispatch = useAppDispatch();
 
   const getSortedSongs = () => {
     return [...songs].sort((a, b) => {
@@ -285,6 +287,9 @@ function SongsContent({ onSongPress }: { onSongPress: (song: any) => void }) {
   };
 
   const handleSongContextAction = (actionId: string) => {
+    if (actionId === 'toggle-favorite' && selectedSong) {
+      dispatch(toggleFavoriteAsync(selectedSong));
+    }
     console.log(`Action ${actionId} for song:`, selectedSong?.title);
     setShowSongContext(false);
     setSelectedSong(null);
