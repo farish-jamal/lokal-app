@@ -78,6 +78,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="lyra"
+        options={{
+          title: 'Lyra',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name={focused ? 'planet' : 'planet-outline'} color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="playlists"
         options={{
           title: 'Playlists',
@@ -90,6 +99,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="settings"
         options={{
