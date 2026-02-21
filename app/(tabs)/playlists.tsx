@@ -37,13 +37,13 @@ export default function PlaylistsScreen() {
     const scheme = useColorScheme() ?? 'light';
     const dispatch = useAppDispatch();
     const { playlists, currentPlaylist, loading } = useAppSelector(s => s.library);
-    
+
     const [showPlaylistDetail, setShowPlaylistDetail] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
     useEffect(() => {
         const loadInitialPlaylists = async () => {
             if (isInitialized || playlists.length > 0) return;
-            
+
             setIsInitialized(true);
             try {
                 await dispatch(fetchPlaylist(SAMPLE_PLAYLISTS[0].url)).unwrap();
@@ -51,7 +51,7 @@ export default function PlaylistsScreen() {
                 console.log('Failed to load initial playlist:', error);
             }
         };
-        
+
         loadInitialPlaylists();
     }, [dispatch, isInitialized, playlists.length]);
 
@@ -111,7 +111,7 @@ export default function PlaylistsScreen() {
             <TouchableOpacity
                 style={[styles.sampleCard, { backgroundColor: C.surface, borderColor: C.border }]}
                 activeOpacity={0.8}
-                onPress={() => handleLoadSamplePlaylist(item.url)}
+                onPress={() => { }}
                 disabled={loading.playlists}
             >
                 <View style={styles.sampleInfo}>
@@ -141,32 +141,9 @@ export default function PlaylistsScreen() {
             {/* Header */}
             <View style={[styles.header, { backgroundColor: C.background }]}>
                 <Text style={[styles.title, { color: C.text }]}>Playlists</Text>
-                <TouchableOpacity
-                    style={[styles.createBtn, { backgroundColor: C.primary, opacity: loading.playlists ? 0.6 : 1 }]}
-                    activeOpacity={0.8}
-                    disabled={loading.playlists}
-                    onPress={() => {
-                        // Load the next available sample playlist
-                        const availablePlaylists = SAMPLE_PLAYLISTS.filter(sample => 
-                            !playlists.some(p => sample.url.includes(p.id))
-                        );
-                        if (availablePlaylists.length > 0) {
-                            handleLoadSamplePlaylist(availablePlaylists[0].url);
-                        }
-                    }}
-                >
-                    {loading.playlists ? (
-                        <ActivityIndicator size={16} color="#fff" />
-                    ) : (
-                        <Ionicons name="add" size={20} color="#fff" />
-                    )}
-                    <Text style={styles.createBtnText}>
-                        {loading.playlists ? 'Loading...' : 'Load More'}
-                    </Text>
-                </TouchableOpacity>
             </View>
 
-            <ScrollView 
+            <ScrollView
                 style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 120 }}
@@ -196,26 +173,7 @@ export default function PlaylistsScreen() {
                     </View>
                 )}
 
-                {/* Sample Playlists Section */}
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: C.text }]}>
-                        {playlists.length === 0 && !loading.playlists ? 'Load More Playlists' : 'Discover More Music'}
-                    </Text>
-                    {playlists.length === 0 && !loading.playlists && (
-                        <Text style={[styles.sectionSubtitle, { color: C.textSecondary }]}>
-                            Tap any playlist below to load it with real songs from JioSaavn
-                        </Text>
-                    )}
-                    <FlatList
-                        data={SAMPLE_PLAYLISTS.filter(sample => 
-                            !playlists.some(p => sample.url.includes(p.id))
-                        )}
-                        keyExtractor={(item, index) => `sample-${index}`}
-                        renderItem={renderSamplePlaylistItem}
-                        scrollEnabled={false}
-                        contentContainerStyle={{ paddingHorizontal: 20 }}
-                    />
-                </View>
+
             </ScrollView>
             <MiniPlayer />
 
@@ -232,7 +190,7 @@ export default function PlaylistsScreen() {
                             barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
                             backgroundColor={C.background}
                         />
-                        
+
                         {/* Modal Header */}
                         <View style={[styles.modalHeader, { backgroundColor: C.background, borderBottomColor: C.border }]}>
                             <TouchableOpacity

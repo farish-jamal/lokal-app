@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -36,24 +37,58 @@ const SONG_CONTEXT_OPTIONS: SongContextOption[] = [
 ];
 
 interface ArtistDetailProps {
+  artistId?: string;
   artistName?: string;
+  artistImage?: string;
   onBack?: () => void;
   onSongPress?: (song: any) => void;
 }
 
-export default function ArtistDetailScreen({ 
-  artistName = "Ariana Grande", 
+export default function ArtistDetailScreen({
+  artistId,
+  artistName = "Ariana Grande",
+  artistImage = "https://picsum.photos/300/300?random=ariana",
   onBack,
-  onSongPress 
+  onSongPress
 }: ArtistDetailProps) {
   const C = useThemeColors();
   const scheme = useColorScheme() ?? 'light';
   const [selectedSong, setSelectedSong] = useState<any>(null);
   const [showSongContext, setShowSongContext] = useState(false);
+  const [artistSongs, setArtistSongs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Filter songs by artist
-  const artistSongs = SONGS.filter(song => song.artist === artistName);
-  
+  useEffect(() => {
+    const fetchArtistSongs = async () => {
+      if (!artistId) {
+        setArtistSongs(SONGS.filter(song => song.artist === artistName));
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const response = await fetch(`https://saavn.sumit.co/api/artists/${artistId}/songs`);
+        const data = await response.json();
+        if (data.success && data.data && data.data.songs) {
+          const formattedSongs = data.data.songs.map((song: any) => ({
+            id: song.id,
+            title: song.name,
+            artist: song.artists?.primary?.[0]?.name || artistName,
+            album: song.album?.name || '',
+            artwork: song.image?.[song.image.length - 1]?.url || 'https://picsum.photos/200',
+            url: song.downloadUrl?.[song.downloadUrl.length - 1]?.url || '',
+          }));
+          setArtistSongs(formattedSongs);
+        }
+      } catch (error) {
+        console.error('Error fetching artist songs:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchArtistSongs();
+  }, [artistId, artistName]);
+
   // Calculate stats
   const albumCount = 1; // Based on the image showing "1 Album"
   const songCount = artistSongs.length;
@@ -108,28 +143,28 @@ export default function ArtistDetailScreen({
               <Ionicons name="close" size={24} color={C.textMuted} />
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView showsVerticalScrollIndicator={false} style={styles.songContextOptions}>
             {SONG_CONTEXT_OPTIONS.map((option, index) => (
               <TouchableOpacity
                 key={option.id}
                 style={[
                   styles.songContextOption,
-                  index !== SONG_CONTEXT_OPTIONS.length - 1 && { 
-                    borderBottomWidth: StyleSheet.hairlineWidth, 
-                    borderBottomColor: C.border 
+                  index !== SONG_CONTEXT_OPTIONS.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: C.border
                   }
                 ]}
                 onPress={() => handleSongContextAction(option.id)}
               >
                 <View style={styles.songContextOptionContent}>
-                  <Ionicons 
-                    name={option.icon} 
-                    size={16} 
-                    color={option.destructive ? '#ff4444' : C.text} 
+                  <Ionicons
+                    name={option.icon}
+                    size={16}
+                    color={option.destructive ? '#ff4444' : C.text}
                   />
                   <Text style={[
-                    styles.songContextOptionText, 
+                    styles.songContextOptionText,
                     { color: option.destructive ? '#ff4444' : C.text }
                   ]}>
                     {option.label}
@@ -159,7 +194,7 @@ export default function ArtistDetailScreen({
         >
           <Ionicons name="chevron-back" size={24} color={C.text} />
         </TouchableOpacity>
-        
+
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={[styles.headerActionBtn, { backgroundColor: C.surface }]}
@@ -176,7 +211,7 @@ export default function ArtistDetailScreen({
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -185,7 +220,7 @@ export default function ArtistDetailScreen({
         <View style={styles.coverSection}>
           <View style={styles.coverContainer}>
             <Image
-              source={{ uri: "https://picsum.photos/300/300?random=ariana" }}
+              source={{ uri: artistImage }}
               style={styles.coverImage}
               resizeMode="cover"
             />
@@ -204,15 +239,15 @@ export default function ArtistDetailScreen({
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.shuffleButton, { backgroundColor: '#ff6b35' }]}
             activeOpacity={0.8}
           >
             <Ionicons name="shuffle" size={18} color="white" />
             <Text style={styles.shuffleButtonText}>Shuffle</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[styles.playButton, { backgroundColor: '#ff6b35' }]}
             activeOpacity={0.8}
           >
@@ -232,40 +267,45 @@ export default function ArtistDetailScreen({
 
           {/* Songs List */}
           <View style={styles.songsList}>
-            {artistSongs.slice(0, 5).map((song, index) => (
-              <View key={song.id} style={styles.songItem}>
-                <TouchableOpacity 
-                  style={styles.songContent} 
-                  activeOpacity={0.8}
-                  onPress={() => onSongPress && onSongPress(song)}
-                >
-                  <Image
-                    source={{ uri: song.artwork }}
-                    style={styles.songArtwork}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.songDetails}>
-                    <Text style={[styles.songTitle, { color: C.text }]} numberOfLines={1}>
-                      {song.title}
-                    </Text>
-                    <Text style={[styles.songArtist, { color: C.textSecondary }]} numberOfLines={1}>
-                      {song.artist}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.songMoreBtn}
-                  onPress={() => {
-                    setSelectedSong(song);
-                    setShowSongContext(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="ellipsis-vertical" size={18} color={C.textMuted} />
-                </TouchableOpacity>
-              </View>
-            ))}
+            {isLoading ? (
+              <ActivityIndicator size="large" color={C.primary} style={{ marginVertical: 40 }} />
+            ) : artistSongs.length === 0 ? (
+              <Text style={{ color: C.textMuted, textAlign: 'center', marginVertical: 20 }}>No songs found</Text>
+            ) : (
+              artistSongs.map((song, index) => (
+                <View key={song.id} style={styles.songItem}>
+                  <TouchableOpacity
+                    style={styles.songContent}
+                    activeOpacity={0.8}
+                    onPress={() => onSongPress && onSongPress(song)}
+                  >
+                    <Image
+                      source={{ uri: song.artwork }}
+                      style={styles.songArtwork}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.songDetails}>
+                      <Text style={[styles.songTitle, { color: C.text }]} numberOfLines={1}>
+                        {song.title}
+                      </Text>
+                      <Text style={[styles.songArtist, { color: C.textSecondary }]} numberOfLines={1}>
+                        {song.artist}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.songMoreBtn}
+                    onPress={() => {
+                      setSelectedSong(song);
+                      setShowSongContext(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={18} color={C.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              )))}
           </View>
         </View>
       </ScrollView>
