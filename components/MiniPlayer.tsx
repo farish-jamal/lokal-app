@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     Dimensions,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -21,9 +22,11 @@ interface MiniPlayerProps {
 export default function MiniPlayer({ onPress }: MiniPlayerProps) {
     const C = useThemeColors();
     const dispatch = useAppDispatch();
-    const { currentSong, isPlaying } = useAppSelector(s => s.player);
+    const { currentSong, isPlaying, progress, isBuffering } = useAppSelector(s => s.player);
 
     if (!currentSong) return null;
+
+    const progressPercent = Math.min(Math.max(progress * 100, 0), 100);
 
     return (
         <TouchableOpacity
@@ -40,7 +43,7 @@ export default function MiniPlayer({ onPress }: MiniPlayerProps) {
         >
             {/* Progress bar */}
             <View style={[styles.progressTrack, { backgroundColor: C.border }]}>
-                <View style={[styles.progressFill, { backgroundColor: C.primary, width: '35%' }]} />
+                <View style={[styles.progressFill, { backgroundColor: C.primary, width: `${progressPercent}%` }]} />
             </View>
 
             <View style={styles.inner}>
@@ -74,11 +77,15 @@ export default function MiniPlayer({ onPress }: MiniPlayerProps) {
                         onPress={() => dispatch(togglePlay())}
                         style={[styles.playBtn, { backgroundColor: C.primary }]}
                     >
-                        <Ionicons
-                            name={isPlaying ? 'pause' : 'play'}
-                            size={18}
-                            color="#fff"
-                        />
+                        {isBuffering ? (
+                            <ActivityIndicator size={16} color="#fff" />
+                        ) : (
+                            <Ionicons
+                                name={isPlaying ? 'pause' : 'play'}
+                                size={18}
+                                color="#fff"
+                            />
+                        )}
                     </TouchableOpacity>
 
                     <TouchableOpacity

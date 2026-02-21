@@ -5,10 +5,16 @@ import 'react-native-reanimated';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
+
+function AudioPlayerBridge() {
+  useAudioPlayer();
+  return null;
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -16,6 +22,7 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AudioPlayerBridge />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

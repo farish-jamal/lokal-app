@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,23 @@ import {
   Image,
   Dimensions,
   Animated,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleFavoriteAsync } from '@/store/slices/librarySlice';
-import { togglePlay, playNext, playPrev } from '@/store/slices/playerSlice';
+import {
+  togglePlay,
+  playNext,
+  playPrev,
+  toggleShuffle,
+  toggleRepeat,
+  downloadSong,
+} from '@/store/slices/playerSlice';
+import audioService from '@/services/audioService';
 
 const { width } = Dimensions.get('window');
 
@@ -53,13 +63,28 @@ export default function FullScreenPlayer({
   const scheme = useColorScheme() ?? 'light';
   const dispatch = useAppDispatch();
   const { favorites } = useAppSelector(s => s.library);
-  const { isPlaying, currentSong } = useAppSelector(s => s.player);
+  const {
+    isPlaying,
+    currentSong,
+    progress,
+    currentTimeMs,
+    durationMs,
+    shuffle,
+    repeat,
+    isBuffering,
+    downloadedSongs,
+    downloadProgress,
+  } = useAppSelector(s => s.player);
 
   const activeSong = currentSong || song;
   const isFavorite = favorites.some((f: Song) => f.id === activeSong.id);
+  const isDownloaded = downloadedSongs.some(d => d.songId === activeSong.id);
+  const songDownloadProgress = downloadProgress[activeSong.id];
+  const isDownloading = songDownloadProgress !== undefined && songDownloadProgress < 1;
 
-  const [currentTime, setCurrentTime] = useState(215); // 3:35 in seconds
   const [showTimer, setShowTimer] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekPosition, setSeekPosition] = useState(0);
 
   // Animation values
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -82,43 +107,70 @@ export default function FullScreenPlayer({
     if (callback) callback();
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const totalDuration = activeSong.duration || 0;
-  const progressPercentage = totalDuration ? (currentTime / totalDuration) * 100 : 0;
+  const displayProgress = isSeeking ? seekPosition : progress;
+  const displayTimeMs = isSeeking ? seekPosition * durationMs : currentTimeMs;
 
   const handlePlayPause = () => {
     dispatch(togglePlay());
   };
 
   const handleSkipBackward = () => {
-    setCurrentTime(Math.max(0, currentTime - 15));
+    const newPos = Math.max(0, currentTimeMs - 15000);
+    audioService.seekTo(newPos);
   };
 
   const handleSkipForward = () => {
-    setCurrentTime(Math.min(totalDuration, currentTime + 15));
+    const newPos = Math.min(durationMs, currentTimeMs + 15000);
+    audioService.seekTo(newPos);
   };
 
   const handlePrevious = () => {
     dispatch(playPrev());
-    setCurrentTime(0);
   };
 
   const handleNext = () => {
     dispatch(playNext());
-    setCurrentTime(0);
   };
 
-  const handleProgressPress = (event: any) => {
+  const handleProgressPress = useCallback((event: any) => {
     const { locationX } = event.nativeEvent;
     const progressWidth = width - 40; // Account for padding
-    const percentage = locationX / progressWidth;
-    const newTime = Math.floor(totalDuration * percentage);
-    setCurrentTime(Math.max(0, Math.min(totalDuration, newTime)));
+    const percentage = Math.max(0, Math.min(1, locationX / progressWidth));
+    audioService.seekToPercentage(percentage);
+  }, []);
+
+  const handleDownload = () => {
+    if (isDownloaded) {
+      Alert.alert('Already Downloaded', 'This song is already available offline.');
+      return;
+    }
+    if (isDownloading) {
+      return;
+    }
+    if (!activeSong.url || activeSong.url.trim() === '') {
+      Alert.alert('Cannot Download', 'No download URL available for this song.');
+      return;
+    }
+    dispatch(downloadSong(activeSong as any));
+  };
+
+  const getRepeatIcon = (): keyof typeof Ionicons.glyphMap => {
+    switch (repeat) {
+      case 'one': return 'repeat';
+      case 'all': return 'repeat';
+      default: return 'repeat';
+    }
+  };
+
+  const getRepeatColor = () => {
+    return repeat === 'none' ? C.textMuted : '#ff6b35';
   };
 
   return (
@@ -137,6 +189,12 @@ export default function FullScreenPlayer({
         >
           <Ionicons name="chevron-down" size={28} color={C.text} />
         </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerSubtitle, { color: C.textMuted }]}>
+            NOW PLAYING
+          </Text>
+        </View>
 
         <TouchableOpacity
           style={styles.headerButton}
@@ -161,6 +219,11 @@ export default function FullScreenPlayer({
             style={styles.artwork}
             resizeMode="cover"
           />
+          {isBuffering && (
+            <View style={styles.bufferingOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+          )}
         </Animated.View>
       </View>
 
@@ -176,15 +239,6 @@ export default function FullScreenPlayer({
 
       {/* Progress Section */}
       <View style={styles.progressSection}>
-        <View style={styles.timeContainer}>
-          <Text style={[styles.timeText, { color: C.textSecondary }]}>
-            {formatTime(currentTime)}
-          </Text>
-          <Text style={[styles.timeText, { color: C.textSecondary }]}>
-            {formatTime(totalDuration)}
-          </Text>
-        </View>
-
         <TouchableOpacity
           style={styles.progressBarContainer}
           onPress={handleProgressPress}
@@ -196,30 +250,44 @@ export default function FullScreenPlayer({
                 styles.progressBarFill,
                 {
                   backgroundColor: '#ff6b35',
-                  width: `${progressPercentage}%`
+                  width: `${displayProgress * 100}%`
                 }
               ]}
             />
           </View>
         </TouchableOpacity>
+
+        <View style={styles.timeContainer}>
+          <Text style={[styles.timeText, { color: C.textSecondary }]}>
+            {formatTime(displayTimeMs)}
+          </Text>
+          <Text style={[styles.timeText, { color: C.textSecondary }]}>
+            {formatTime(durationMs)}
+          </Text>
+        </View>
       </View>
 
       {/* Main Controls */}
       <View style={styles.mainControls}>
+        {/* Shuffle */}
+        <TouchableOpacity
+          style={styles.modeButton}
+          onPress={() => dispatch(toggleShuffle())}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="shuffle"
+            size={22}
+            color={shuffle ? '#ff6b35' : C.textMuted}
+          />
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.controlButton}
           onPress={() => handleButtonPress(handlePrevious)}
           activeOpacity={0.7}
         >
-          <Ionicons name="play-skip-back" size={32} color={C.text} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={() => handleButtonPress(handleSkipBackward)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="play-back" size={24} color={C.text} />
+          <Ionicons name="play-skip-back" size={28} color={C.text} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -227,20 +295,16 @@ export default function FullScreenPlayer({
           onPress={() => handleButtonPress(handlePlayPause)}
           activeOpacity={0.8}
         >
-          <Ionicons
-            name={isPlaying ? "pause" : "play"}
-            size={32}
-            color="white"
-            style={!isPlaying ? { marginLeft: 3 } : {}}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={() => handleButtonPress(handleSkipForward)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="play-forward" size={24} color={C.text} />
+          {isBuffering ? (
+            <ActivityIndicator size={28} color="white" />
+          ) : (
+            <Ionicons
+              name={isPlaying ? "pause" : "play"}
+              size={32}
+              color="white"
+              style={!isPlaying ? { marginLeft: 3 } : {}}
+            />
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -248,7 +312,27 @@ export default function FullScreenPlayer({
           onPress={() => handleButtonPress(handleNext)}
           activeOpacity={0.7}
         >
-          <Ionicons name="play-skip-forward" size={32} color={C.text} />
+          <Ionicons name="play-skip-forward" size={28} color={C.text} />
+        </TouchableOpacity>
+
+        {/* Repeat */}
+        <TouchableOpacity
+          style={styles.modeButton}
+          onPress={() => dispatch(toggleRepeat())}
+          activeOpacity={0.7}
+        >
+          <View>
+            <Ionicons
+              name={getRepeatIcon()}
+              size={22}
+              color={getRepeatColor()}
+            />
+            {repeat === 'one' && (
+              <View style={styles.repeatOneBadge}>
+                <Text style={styles.repeatOneText}>1</Text>
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -266,6 +350,28 @@ export default function FullScreenPlayer({
           />
         </TouchableOpacity>
 
+        {/* Download button */}
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={handleDownload}
+          activeOpacity={0.7}
+        >
+          {isDownloading ? (
+            <View style={styles.downloadProgressContainer}>
+              <ActivityIndicator size={20} color="#ff6b35" />
+              <Text style={[styles.downloadPercent, { color: '#ff6b35' }]}>
+                {Math.round((songDownloadProgress || 0) * 100)}%
+              </Text>
+            </View>
+          ) : (
+            <Ionicons
+              name={isDownloaded ? "cloud-done" : "cloud-download-outline"}
+              size={24}
+              color={isDownloaded ? '#ff6b35' : C.textMuted}
+            />
+          )}
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.secondaryButton}
           onPress={() => setShowTimer(!showTimer)}
@@ -278,14 +384,7 @@ export default function FullScreenPlayer({
           style={styles.secondaryButton}
           activeOpacity={0.7}
         >
-          <Ionicons name="tv-outline" size={24} color={C.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="ellipsis-horizontal" size={24} color={C.textMuted} />
+          <Ionicons name="list" size={24} color={C.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -318,6 +417,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
   artworkContainer: {
     alignItems: 'center',
     paddingHorizontal: 40,
@@ -340,6 +447,13 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 20,
   },
+  bufferingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   songInfo: {
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -358,12 +472,12 @@ const styles = StyleSheet.create({
   },
   progressSection: {
     paddingHorizontal: 20,
-    marginBottom: 40,
+    marginBottom: 30,
   },
   timeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginTop: 8,
   },
   timeText: {
     fontSize: 14,
@@ -387,8 +501,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
-    marginBottom: 40,
-    gap: 20,
+    marginBottom: 30,
+    gap: 16,
+  },
+  modeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   controlButton: {
     width: 50,
@@ -403,12 +524,28 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 10,
+    marginHorizontal: 6,
     shadowColor: '#ff6b35',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  repeatOneBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    backgroundColor: '#ff6b35',
+    borderRadius: 7,
+    width: 14,
+    height: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  repeatOneText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
   },
   secondaryControls: {
     flexDirection: 'row',
@@ -423,6 +560,14 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  downloadProgressContainer: {
+    alignItems: 'center',
+  },
+  downloadPercent: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginTop: 2,
   },
   lyricsSection: {
     alignItems: 'center',

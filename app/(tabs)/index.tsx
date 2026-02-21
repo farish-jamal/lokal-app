@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { setCurrentSong, setQueue } from '@/store/slices/playerSlice';
 import { fetchHomeData, fetchArtists, fetchAlbums, toggleFavoriteAsync } from '@/store/slices/librarySlice';
 import SongCard from '@/components/SongCard';
 import ArtistCard from '@/components/ArtistCard';
@@ -1069,6 +1070,7 @@ export default function HomeScreen() {
   const [selectedArtistForDetail, setSelectedArtistForDetail] = useState<any>(null);
   const dispatch = useAppDispatch();
   const { currentSong } = useAppSelector(s => s.player);
+  const { songs } = useAppSelector(s => s.library);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -1076,6 +1078,11 @@ export default function HomeScreen() {
   }, [dispatch]);
 
   const handleSongPress = (song: any) => {
+    // Set the queue and current song in Redux — this triggers actual audio playback
+    if (songs.length > 0) {
+      dispatch(setQueue(songs));
+    }
+    dispatch(setCurrentSong(song));
     setCurrentPlayingSong(song);
     setShowFullScreenPlayer(true);
   };
@@ -1161,7 +1168,9 @@ export default function HomeScreen() {
       <MiniPlayer
         onPress={() => {
           if (currentSong) {
-            handleSongPress(currentSong);
+            // Just open the full screen player, don't re-trigger playback
+            setCurrentPlayingSong(currentSong);
+            setShowFullScreenPlayer(true);
           }
         }}
       />

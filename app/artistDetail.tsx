@@ -72,10 +72,12 @@ export default function ArtistDetailScreen({
           const formattedSongs = data.data.songs.map((song: any) => ({
             id: song.id,
             title: song.name,
-            artist: song.artists?.primary?.[0]?.name || artistName,
+            artist: song.artists?.primary?.map((a: any) => a.name).join(', ') || artistName,
             album: song.album?.name || '',
             artwork: song.image?.[song.image.length - 1]?.url || 'https://picsum.photos/200',
-            url: song.downloadUrl?.[song.downloadUrl.length - 1]?.url || '',
+            url: song.downloadUrl?.find((d: any) => d.quality === '160kbps')?.url || song.downloadUrl?.[song.downloadUrl.length - 1]?.url || '',
+            duration: song.duration || 0,
+            isFavorite: false,
           }));
           setArtistSongs(formattedSongs);
         }
