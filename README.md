@@ -1,50 +1,67 @@
-# Welcome to your Expo app 👋
+# SawanApp 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A sleek, feature-rich music player built with Expo and React Native. It offers a premium streaming experience with AI-powered suggestions and persistent local storage.
 
-## Get started
+## 🚀 Get Started
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### 1. Install Dependencies
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Environment Setup
+Create a `.env` file in the root directory and add your Gemini API key for the "Lyra" AI assistant:
+```env
+EXPO_PUBLIC_GEMINI_API_KEY=your_api_key_here
+```
 
-## Learn more
+### 3. Start the App
+```bash
+npx expo start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 🏗️ Architecture
 
-## Join the community
+SawanApp follows a modern, modular architecture:
 
-Join our community of developers creating universal apps.
+- **Routing (`/app`)**: Uses **Expo Router** for file-based navigation (Tabs, Stack, Modals).
+- **State Management (`/store`)**: Powered by **Redux Toolkit**. It handles the global player state, music queue, and user library.
+- **Audio Core (`/hooks`)**: A central `useAudioPlayer` hook manages `expo-av` playback logic, ensuring the music keeps playing across different screens.
+- **Services (`/services`)**: Clean API integration using the Saavn API for fetching songs, albums, and artists.
+- **AI Integration**: Uses **Google Gemini API** (Lyra) to suggest music based on your mood or vibes.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## 📂 Project Structure
+
+- `app/`: All screens and navigation logic.
+- `components/`: Reusable UI elements (Song Cards, Playback Controls).
+- `store/`: Redux slices for global state.
+- `services/`: API calls and data fetching.
+- `hooks/`: Custom logic for audio player and persistence.
+
+---
+
+## ⚖️ Trade-offs & Decisions
+
+### 1. AsyncStorage for Persistence
+- **Why**: We use `AsyncStorage` to save your favorites and queue locally.
+- **Trade-off**: It's simple and fast for small data but might become slow if a user has thousands of saved songs. A database like SQLite would be a better alternative for massive libraries.
+
+### 2. Third-Party API
+- **Why**: We rely on a public Saavn API wrapper for high-quality music metadata.
+- **Trade-off**: If the external API goes down, search and discovery will stop working. We cache some data to mitigate this.
+
+### 3. Expo AV for Playback
+- **Why**: `expo-av` provides a unified API for audio on both iOS and Android.
+- **Trade-off**: While great for standard playback, it lacks some advanced professional audio features (like gapless playback or complex crossfades) compared to native-only libraries.
+
+---
+
+## ✨ Features
+- 🔍 **Global Search**: Find any song, artist, or album.
+- 🤖 **Lyra AI**: Ask for music suggestions based on your vibe.
+- 💾 **Persistence**: Your queue and favorites stay saved even after you close the app.
+- 🎨 **Modern UI**: Smooth animations and beautiful linear gradients.
